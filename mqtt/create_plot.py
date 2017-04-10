@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import MySQLdb
 import pandas as pd
 import plotly.plotly as py
@@ -23,7 +24,7 @@ curs.execute("select recorded_at,channel,data from sensor_readings where channel
 temp_rows = curs.fetchall()
 temp_df = pd.DataFrame( [[ij for ij in i] for i in temp_rows] )
 temp_df.rename(columns={0: 'Timestamp', 1: 'Channel', 2: 'Reading'}, inplace=True);
-temp_df = temp_df.sort(['Timestamp'], ascending=[1])
+temp_df = temp_df.sort_values(by=['Timestamp'], ascending=[1])
 
 print "Building Plot"
 
@@ -40,5 +41,5 @@ layout = Layout(
 )
 data = Data([trace1])
 fig = Figure(data=data, layout=layout)
-
+print "Uploading Plot to plot.ly"
 py.plot(fig, filename='home_sensors')
