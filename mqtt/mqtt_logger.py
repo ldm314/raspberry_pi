@@ -1,11 +1,14 @@
-#!/bin/env python
+#!/usr/bin/env python
 import paho.mqtt.client as mqtt
 import ConfigParser
 import MySQLdb
-
+import time
 
 config = ConfigParser.ConfigParser()
 config.read('mqtt_logger.cfg')
+
+print "waiting 15 seconds so mysql will start"
+time.sleep(15)
 
 mysql_host = config.get('mysql','hostname')
 mysql_user = config.get('mysql','user')

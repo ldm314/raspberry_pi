@@ -7,7 +7,7 @@ from plotly.graph_objs import *
 
 
 config = ConfigParser.ConfigParser()
-config.read('mqtt_logger.cfg')
+config.read('/root/raspberry_pi/mqtt/mqtt_logger.cfg')
 
 mysql_host = config.get('mysql','hostname')
 mysql_user = config.get('mysql','user')
@@ -28,18 +28,58 @@ temp_df = temp_df.sort_values(by=['Timestamp'], ascending=[1])
 
 print "Building Plot"
 
-trace1 = Scatter(
-    x=temp_df['Timestamp'],
-    y=temp_df['Reading'],
-    name='Temperature',
-    mode='lines'
-)
+series = []
+sensors = temp_df['Channel'].unique()
+
+for sensor in sensors:
+    series.append( Scatter(
+        x=temp_df[(temp_df['Channel'] == sensor)]['Timestamp'],
+        y=temp_df[(temp_df['Channel'] == sensor)]['Reading'],
+        name=sensor,
+        mode='lines'
+    ) )
+
 layout = Layout(
     title='All Sensors Temperature',
     xaxis=XAxis( title='Time' ),
     yaxis=YAxis( title='Degrees C' ),
 )
-data = Data([trace1])
+data = Data(series)
 fig = Figure(data=data, layout=layout)
-print "Uploading Plot to plot.ly"
+
+
+print "Querying"
+
+curs.execute("select recorded_at,channel,data from sensor_readings where channel like '%voltage'")
+volt_rows = curs.fetchall()
+volt_df = pd.DataFrame( [[ij for ij in i] for i in volt_rows] )
+volt_df.rename(columns={0: 'Timestamp', 1: 'Channel', 2: 'Reading'}, inplace=True);
+volt_df = volt_df.sort_values(by=['Timestamp'], ascending=[1])
+
+print "Building Plot"
+
+series2 = []
+sensors = volt_df['Channel'].unique()
+
+for sensor in sensors:
+    series2.append( Scatter(
+        x=volt_df[(volt_df['Channel'] == sensor)]['Timestamp'],
+        y=volt_df[(volt_df['Channel'] == sensor)]['Reading'],
+        name=sensor,
+        mode='lines'
+    ) )
+
+layout2 = Layout(
+    title='All Sensors Voltage',
+    xaxis=XAxis( title='Time' ),
+    yaxis=YAxis( title='mV' ),
+)
+data2 = Data(series2)
+fig2 = Figure(data=data2, layout=layout2)
+
+
+print "Uploading Plots to plot.ly"
+
 py.plot(fig, filename='home_sensors')
+py.plot(fig2, filename='home_voltage_sensors')
+
