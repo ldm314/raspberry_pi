@@ -2,7 +2,9 @@
 import paho.mqtt.client as mqtt
 import ConfigParser
 import MySQLdb
+import datetime
 import time
+import json
 
 config = ConfigParser.ConfigParser()
 config.read('mqtt_logger.cfg')
@@ -29,8 +31,14 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    print(msg.topic+" "+str(msg.payload))
-    curs.execute("INSERT INTO sensor_readings(channel,data) values (%s,%s)",(msg.topic,str(msg.payload)))
+    #recorded_at
+    if str(msg.payload)[0] == '{':
+        obj = json.loads(str(msg.payload))
+        ts = datetime.datetime.strptime(obj['ts'], "%Y-%m-%dT%H:%M:%S.%fZ")
+        curs.execute("INSERT INTO sensor_readings(recorded_at,channel,data) values (%s,%s,%s)",(ts.strftime('%Y-%m-%d %H:%M:%S'),msg.topic,str(obj['reading'])))
+    else:
+        curs.execute("INSERT INTO sensor_readings(channel,data) values (%s,%s)",(msg.topic,str(msg.payload)))
+        
     db.commit()
 
 client = mqtt.Client()

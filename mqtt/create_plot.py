@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import MySQLdb
 import pandas as pd
-import plotly.plotly as py
+import plotly as py
 import ConfigParser
 from plotly.graph_objs import *
 
@@ -20,7 +20,7 @@ curs=db.cursor()
 
 print "Querying"
 
-curs.execute("select recorded_at,channel,data from sensor_readings where channel like '%temperature'")
+curs.execute("select recorded_at,channel,data from sensor_readings where channel like '%temperature' order by recorded_at desc limit 75000")
 temp_rows = curs.fetchall()
 temp_df = pd.DataFrame( [[ij for ij in i] for i in temp_rows] )
 temp_df.rename(columns={0: 'Timestamp', 1: 'Channel', 2: 'Reading'}, inplace=True);
@@ -32,6 +32,12 @@ series = []
 sensors = temp_df['Channel'].unique()
 
 for sensor in sensors:
+    if "linknode" in sensor:
+        continue
+    if "wemos" in sensor:
+        continue
+    if "devboard" in sensor:
+        continue
     series.append( Scatter(
         x=temp_df[(temp_df['Channel'] == sensor)]['Timestamp'],
         y=temp_df[(temp_df['Channel'] == sensor)]['Reading'],
@@ -50,7 +56,7 @@ fig = Figure(data=data, layout=layout)
 
 print "Querying"
 
-curs.execute("select recorded_at,channel,data from sensor_readings where channel like '%voltage'")
+curs.execute("select recorded_at,channel,data from sensor_readings where channel like '%voltage' order by recorded_at desc limit 75000")
 volt_rows = curs.fetchall()
 volt_df = pd.DataFrame( [[ij for ij in i] for i in volt_rows] )
 volt_df.rename(columns={0: 'Timestamp', 1: 'Channel', 2: 'Reading'}, inplace=True);
@@ -62,6 +68,12 @@ series2 = []
 sensors = volt_df['Channel'].unique()
 
 for sensor in sensors:
+    if "linknode" in sensor:
+        continue
+    if "wemos" in sensor:
+        continue
+    if "devboard" in sensor:
+        continue
     series2.append( Scatter(
         x=volt_df[(volt_df['Channel'] == sensor)]['Timestamp'],
         y=volt_df[(volt_df['Channel'] == sensor)]['Reading'],
@@ -77,9 +89,40 @@ layout2 = Layout(
 data2 = Data(series2)
 fig2 = Figure(data=data2, layout=layout2)
 
+print "Querying"
+
+curs.execute("select recorded_at,channel,data from sensor_readings where channel like '%rssi'  order by recorded_at desc limit 75000")
+rssi_rows = curs.fetchall()
+rssi_df = pd.DataFrame( [[ij for ij in i] for i in rssi_rows] )
+rssi_df.rename(columns={0: 'Timestamp', 1: 'Channel', 2: 'Reading'}, inplace=True);
+rssi_df = rssi_df.sort_values(by=['Timestamp'], ascending=[1])
+
+print "Building Plot"
+
+series3 = []
+sensors = rssi_df['Channel'].unique()
+
+for sensor in sensors:
+    series3.append( Scatter(
+        x=rssi_df[(rssi_df['Channel'] == sensor)]['Timestamp'],
+        y=rssi_df[(rssi_df['Channel'] == sensor)]['Reading'],
+        name=sensor,
+        mode='lines'
+    ) )
+
+layout3 = Layout(
+    title='All Sensors Signal',
+    xaxis=XAxis( title='Time' ),
+    yaxis=YAxis( title='RSSI' ),
+)
+data3 = Data(series3)
+fig3 = Figure(data=data3, layout=layout3)
+
+
 
 print "Uploading Plots to plot.ly"
 
-py.plot(fig, filename='home_sensors')
-py.plot(fig2, filename='home_voltage_sensors')
+py.offline.plot(fig, filename='/var/www/html2/home_sensors.html')
+py.offline.plot(fig2, filename='/var/www/html2/home_voltage_sensors.html')
+py.offline.plot(fig3, filename='/var/www/html2/home_rssi_sensors.html')
 
